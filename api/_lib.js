@@ -81,13 +81,15 @@ async function classifyTikTok(input) {
     } else if (lower.includes('/video/')) {
       kind = 'video';
       reason = 'resolved URL contains /video/';
+    } else if (lower.includes('/music/')) {
+      kind = 'music';
+      reason = 'resolved URL contains /music/ (sound page)';
     } else if (isTikTokProfileUrl(resolvedUrl)) {
       kind = 'profile';
       reason = 'resolved URL matches a TikTok profile (/@handle with no media segment)';
     } else if (lower.includes('tiktok.com')) {
-      // Fallback for any tiktok.com URL that doesn't match the above
       kind = 'unknown';
-      reason = 'resolved URL is a tiktok.com page but not a recognised profile, video, photo, or live URL';
+      reason = 'resolved URL is a tiktok.com page but not a recognised profile, video, photo, live, or music URL';
     } else {
       reason = 'resolved URL is not a TikTok URL';
     }
@@ -115,7 +117,6 @@ async function classifyTikTok(input) {
     error: fetchError,
   };
 }
-
 /* Add this helper anywhere above classifyTikTok() */
 function isTikTokProfileUrl(url) {
   try {
