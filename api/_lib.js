@@ -274,9 +274,22 @@ async function classifyTwitter(input) {
     }
 
     const tweet = await res.json();
+
+    // 3️⃣ Handle tombstone (deleted, protected, or age-restricted)
+    if (tweet.__typename === 'TweetTombstone') {
+      return {
+        input,
+        kind: 'unknown',
+        reason: 'tweet is unavailable (deleted, protected, or marked sensitive by X)',
+        resolved_url: input,
+        is_live: null,
+        live_username: '',
+        error: 'TweetTombstone',
+      };
+    }
+
     const media = pickTweetMedia(tweet);
 
-    // Try to canonicalise the URL using the tweet author + id when available.
     const user = tweet.user?.screen_name;
     const resolvedUrl = user
       ? `https://x.com/${user}/status/${tweetId}`
@@ -290,7 +303,6 @@ async function classifyTwitter(input) {
       is_live: null,
       live_username: '',
       error: null,
-      // Extra fields (safe to ignore; your current frontend will just not show them)
       media_url: media.url || '',
       video_url: media.videoUrl || '',
     };
