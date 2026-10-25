@@ -69,6 +69,7 @@ async function classifyTikTok(input) {
 
   if (resolvedUrl) {
     const lower = resolvedUrl.toLowerCase();
+
     if (lower.includes('/live')) {
       kind = 'live';
       reason = 'resolved URL contains /live';
@@ -80,9 +81,13 @@ async function classifyTikTok(input) {
     } else if (lower.includes('/video/')) {
       kind = 'video';
       reason = 'resolved URL contains /video/';
+    } else if (isTikTokProfileUrl(resolvedUrl)) {
+      kind = 'profile';
+      reason = 'resolved URL matches a TikTok profile (/@handle with no media segment)';
     } else if (lower.includes('tiktok.com')) {
-      kind = 'video';
-      reason = 'resolved URL is a tiktok.com URL (defaulting to video)';
+      // Fallback for any tiktok.com URL that doesn't match the above
+      kind = 'unknown';
+      reason = 'resolved URL is a tiktok.com page but not a recognised profile, video, photo, or live URL';
     } else {
       reason = 'resolved URL is not a TikTok URL';
     }
@@ -109,6 +114,16 @@ async function classifyTikTok(input) {
     live_username: liveUsername,
     error: fetchError,
   };
+}
+
+/* Add this helper anywhere above classifyTikTok() */
+function isTikTokProfileUrl(url) {
+  try {
+    const path = new URL(url).pathname; // e.g. "/@nahommedia" or "/@nahommedia/"
+    return /^\/@[A-Za-z0-9._]+\/?$/.test(path);
+  } catch {
+    return false;
+  }
 }
 
 /* ------------------------------------------------------------------ */
