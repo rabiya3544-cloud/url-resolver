@@ -163,10 +163,28 @@ function syndicationToken(tweetId) {
 }
 
 function pickTweetMedia(tweet) {
-  const media = Array.isArray(tweet.mediaDetails) ? tweet.mediaDetails : [];
-  if (!media.length) return { kind: 'text', reason: 'tweet contains no media' };
+  // 1️⃣ Check the top-level `video` property (used for some video tweets)
+  if (tweet.video) {
+    const v = tweet.video;
+    // The video object may contain video_info.variants directly, or be nested
+    const variants = v.video_info?.variants || v.variants || [];
+    const bestUrl = pickBestVariant({ video_info: { variants } });
+    if (bestUrl) {
+      return {
+        kind: 'video',
+        reason: 'tweet.video contains video variants',
+        url: v.poster || v.thumbnail_url || '',
+        videoUrl: bestUrl,
+      };
+    }
+  }
 
-  // Prefer video > animated_gif > photo
+  // 2️⃣ Fall back to mediaDetails (the common case)
+  const media = Array.isArray(tweet.mediaDetails) ? tweet.mediaDetails : [];
+  if (!media.length) {
+    return { kind: 'text', reason: 'tweet contains no media (mediaDetails empty)' };
+  }
+
   const video = media.find((m) => m.type === 'video');
   if (video) {
     return {
