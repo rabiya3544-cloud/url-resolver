@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1115" />
+<title>TikTok Link Resolver</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --card:#171a21;
+    --card2:#1f232c;
+    --text:#eef1f6;
+    --muted:#9aa3b2;
+    --line:rgba(255,255,255,.09);
+    --accent:#fe2c55;
+    --accent2:#25f4ee;
+    --ok:#22c55e;
+  }
+  *,*::before,*::after{ box-sizing:border-box; }
+  html,body{ margin:0; min-height:100%; }
+  body{
+    background:
+      radial-gradient(900px 500px at 50% -15%, #1d222c 0%, transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+  [hidden]{ display:none !important; }
+
+  .app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100dvh;
+    padding:calc(18px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .head{ display:flex; align-items:center; gap:11px; padding:2px 2px 4px; }
+  .logo{
+    width:38px; height:38px; border-radius:12px; flex:0 0 auto;
+    background:linear-gradient(135deg,var(--accent),#ff5c7a 45%,var(--accent2));
+    position:relative;
+  }
+  .logo::after{
+    content:"";
+    position:absolute; inset:0;
+    background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), transparent 55%);
+    border-radius:inherit;
+  }
+  h1{ margin:0; font-size:17px; font-weight:800; letter-spacing:-.01em; }
+  .head p{ margin:2px 0 0; font-size:12px; color:var(--muted); }
+
+  .card{
+    background:linear-gradient(180deg,var(--card),#14171d);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+  }
+
+  label{
+    display:block;
+    font-size:11px; font-weight:700; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--muted);
+    margin-bottom:8px;
+  }
+
+  input{
+    width:100%;
+    font:inherit; font-size:16px;
+    color:var(--text);
+    background:var(--card2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 13px;
+    outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input::placeholder{ color:#5f6878; }
+  input:focus{
+    border-color:rgba(254,44,85,.6);
+    box-shadow:0 0 0 3px rgba(254,44,85,.15);
+  }
+
+  button[type=submit]{
+    width:100%; margin-top:10px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font:inherit; font-size:15px; font-weight:700; color:#fff;
+    background:linear-gradient(135deg,var(--accent),#ff5c7a);
+    border:0; border-radius:12px; padding:13px;
+    cursor:pointer; touch-action:manipulation;
+    transition:transform .08s ease, filter .15s;
+  }
+  button[type=submit]:active{ transform:scale(.985); }
+  button[type=submit]:disabled{ filter:saturate(.55) brightness(.85); cursor:progress; }
+
+  .spinner{
+    display:none; width:16px; height:16px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.35); border-top-color:#fff;
+    animation:spin .7s linear infinite;
+  }
+  .is-loading .spinner{ display:block; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .result{ display:flex; flex-direction:column; gap:10px; }
+  .result-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .result-head label{ margin:0; }
+
+  .badge{
+    font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase;
+    padding:4px 9px; border-radius:999px; color:#0a0c10;
+    background:linear-gradient(135deg,var(--accent2),#7af7f2);
+    white-space:nowrap;
+  }
+
+  .url{
+    margin:0;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12.5px; line-height:1.55; color:#dfe5ef;
+    background:var(--card2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:11px 12px;
+    word-break:break-all; overflow-wrap:anywhere;
+    max-height:112px; overflow:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .hint{ margin:0; font-size:11.5px; color:var(--muted); line-height:1.4; }
+
+  .actions{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .actions button,
+  .actions a{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    height:42px; border-radius:12px;
+    font:inherit; font-size:14px; font-weight:600;
+    background:var(--card2); color:var(--text);
+    border:1px solid var(--line);
+    text-decoration:none; cursor:pointer; touch-action:manipulation;
+    transition:background .15s, transform .08s, color .15s, border-color .15s;
+  }
+  .actions button:active,
+  .actions a:active{ transform:scale(.985); }
+  .actions .primary{
+    background:linear-gradient(135deg,var(--accent),#ff5c7a);
+    border-color:transparent; color:#fff;
+  }
+  .actions .done{ color:var(--ok); border-color:rgba(34,197,94,.45); }
+
+  .status{
+    border-radius:14px; padding:12px 14px;
+    font-size:13.5px; line-height:1.45;
+    border:1px solid;
+  }
+  .status.error{
+    color:#ffc9d2;
+    background:rgba(244,63,94,.1);
+    border-color:rgba(244,63,94,.32);
+  }
+
+  .foot{
+    margin-top:auto; padding-top:8px;
+    text-align:center; font-size:11px; color:#5f6878;
+  }
+
+  @keyframes pop{
+    from{ opacity:0; transform:translateY(6px); }
+    to{ opacity:1; transform:none; }
+  }
+  .pop{ animation:pop .22s ease-out both; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<main class="app">
+
+  <header class="head">
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <h1>TikTok Resolver</h1>
+      <p>Short link → direct video URL</p>
+    </div>
+  </header>
+
+  <form class="card" id="form" novalidate>
+    <label for="url">TikTok link</label>
+    <input
+      id="url"
+      name="url"
+      type="url"
+      inputmode="url"
+      placeholder="https://vt.tiktok.com/ZSgQfXgeA/"
+      autocomplete="off"
+      autocapitalize="off"
+      autocorrect="off"
+      spellcheck="false"
+      required
+    />
+    <button type="submit" id="submit">
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="btn-label">Resolve link</span>
+    </button>
+  </form>
+
+  <div class="status error" id="status" role="alert" hidden></div>
+
+  <section class="card result" id="result" hidden>
+    <div class="result-head">
+      <label>Resolved URL</label>
+      <span class="badge" id="kind" hidden></span>
+    </div>
+
+    <p class="url" id="resolved-url"></p>
+    <p class="hint" id="reason" hidden></p>
+
+    <div class="actions">
+      <button type="button" id="copy">Copy</button>
+      <a id="open" class="primary" href="#" target="_blank" rel="noopener noreferrer">Open</a>
+    </div>
+  </section>
+
+  <p class="foot">Powered by url-resolver</p>
+
+</main>
+
+<script>
+(function () {
+  'use strict';
+  
+
+  var API = 'https://url-resolver-lac.vercel.app/api/classify';
+
+  var form       = document.getElementById('form');
+  var input      = document.getElementById('url');
+  var submitBtn  = document.getElementById('submit');
+  var btnLabel   = submitBtn.querySelector('.btn-label');
+
+  var statusEl   = document.getElementById('status');
+  var resultCard = document.getElementById('result');
+  var resolvedEl = document.getElementById('resolved-url');
+  var kindEl     = document.getElementById('kind');
+  var reasonEl   = document.getElementById('reason');
+  var copyBtn    = document.getElementById('copy');
+  var openBtn    = document.getElementById('open');
+
+  var currentUrl = '';
+
+  /* ---------------- UI helpers ---------------- */
+
+  function setLoading(on) {
+    submitBtn.disabled = on;
+    submitBtn.classList.toggle('is-loading', on);
+    btnLabel.textContent = on ? 'Resolving…' : 'Resolve link';
+  }
+
+  function showStatus(msg) {
+    statusEl.textContent = msg;
+    statusEl.hidden = false;
+  }
+
+  function hideStatus() {
+    statusEl.hidden = true;
+    statusEl.textContent = '';
+  }
+
+  function hideResult() {
+    resultCard.hidden = true;
+    resultCard.classList.remove('pop');
+    currentUrl = '';
+  }
+
+  /* ---------------- render ---------------- */
+
+  function render(data) {
+    var resolved = String((data && data.resolved_url) || '').trim();
+
+    if (!data || data.ok !== true || !resolved) {
+      showStatus(
+        (data && (data.error || data.reason)) ||
+        'Could not resolve that link. Make sure it’s a valid TikTok URL.'
+      );
+      return;
+    }
+
+    currentUrl = resolved;
+    resolvedEl.textContent = resolved;
+    openBtn.href = resolved;
+
+    if (data.kind) {
+      kindEl.textContent = data.kind;
+      kindEl.hidden = false;
+    } else {
+      kindEl.hidden = true;
+    }
+
+    if (data.reason) {
+      reasonEl.textContent = data.reason;
+      reasonEl.hidden = false;
+    } else {
+      reasonEl.hidden = true;
+    }
+
+    resultCard.hidden = false;
+    void resultCard.offsetWidth;
+    resultCard.classList.add('pop');
+  }
+
+  /* ---------------- submit ---------------- */
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    var value = input.value.trim();
+    if (!value) { input.focus(); return; }
+
+    hideStatus();
+    hideResult();
+    setLoading(true);
+
+    fetch(API + '?url=' + encodeURIComponent(value), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('Request failed (' + res.status + ')');
+        return res.json();
+      })
+      .then(render)
+      .catch(function (err) {
+        showStatus(
+          err && err.message === 'Failed to fetch'
+            ? 'Network error — could not reach the resolver.'
+            : (err.message || 'Something went wrong. Please try again.')
+        );
+      })
+      .finally(function () {
+        setLoading(false);
+      });
+  });
+
+  /* ---------------- copy ---------------- */
+
+  copyBtn.addEventListener('click', function () {
+    if (!currentUrl) return;
+
+    var done = function () {
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('done');
+      setTimeout(function () {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('done');
+      }, 1400);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(currentUrl).then(done).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+
+    function fallbackCopy() {
+      var ta = document.createElement('textarea');
+      ta.value = currentUrl;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      done();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
